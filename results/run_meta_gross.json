@@ -1,0 +1,93 @@
+{
+  "study_version": "0.1.0",
+  "gross": true,
+  "generated_at": "2026-10-21T05:23:41.499391+00:00",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "AVAXUSDT",
+    "LINKUSDT",
+    "ARBUSDT"
+  ],
+  "strategies": [
+    "ma_trend",
+    "bollinger_mr",
+    "donchian",
+    "funding_carry",
+    "random_entry",
+    "buy_hold"
+  ],
+  "configs": [
+    {
+      "name": "control",
+      "group": "main",
+      "leverage": 5.0,
+      "exposure_cap": null,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "cap_1x",
+      "group": "main",
+      "leverage": 5.0,
+      "exposure_cap": 1.0,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "kill_5pct",
+      "group": "main",
+      "leverage": 5.0,
+      "exposure_cap": null,
+      "daily_loss_limit": 0.05,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "all",
+      "group": "main",
+      "leverage": 5.0,
+      "exposure_cap": 1.0,
+      "daily_loss_limit": 0.05,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "dup_nodedupe",
+      "group": "dup",
+      "leverage": 1.0,
+      "exposure_cap": null,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.1
+    },
+    {
+      "name": "dup_dedupe",
+      "group": "dup",
+      "leverage": 1.0,
+      "exposure_cap": null,
+      "daily_loss_limit": null,
+      "dedupe": true,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.1
+    }
+  ],
+  "start": "2022-01-01T00:00:00Z",
+  "taker_fee": 0.0,
+  "slippage": 0.0,
+  "seed": 20260101,
+  "pandas": "3.0.6",
+  "numpy": "2.5.4"
+}

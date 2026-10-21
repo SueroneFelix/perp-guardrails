@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# raw market data is re-downloadable (about 60 MB)
+data/klines/
+data/funding/
+data/manifest.json
+
+# keep the published tables and figures, drop the bulky per-bar curves
+results/*
+!results/*.csv
+!results/run_meta*.json
+!results/figures/
+!results/figures/*.png
+!results/figures/*.svg
+results/equity_curves_sample*.csv
+
+# internal go-to-market notes, not part of the published study
+LAUNCH.md
