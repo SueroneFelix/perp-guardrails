@@ -82,9 +82,9 @@ The 1x cap is not a clever rule. It is the least interesting guardrail you can i
 
 ![Return versus tail](results/figures/fig2_tail.png)
 
-Look at the nine accounts that still died at 1x. Seven of them are `funding_carry` — a strategy that flips with the funding sign, which in practice kept it short 43–62% of the time. In 2023–2025 that meant being short into rallies: every one of those seven symbols eventually ran at least 200% off a local low, and SOL ran 30x. At 1x, a 100% adverse move is still a wipeout. The cap bounds your exposure; it does not bound the market's.
+Look at the nine accounts that still died at 1x. Seven of them are `funding_carry` — a strategy that flips with the funding sign, which in practice kept it short 43–62% of the time. In 2023–2025 that meant being short into rallies: every one of those seven symbols eventually ran at least 200% off a local low, and SOL more than 30x. Meanwhile the deepest drawdown across those same seven markets was −95% (SOL), so at 1x no long could have been wiped by price alone. **Everything that died at 1x died short.** At 1x, a 100% adverse move is still a wipeout. The cap bounds your exposure; it does not bound the market's.
 
-The other two are XRP mean-reversion and XRP random entries — both short when the squeeze came.
+The other two are XRP mean-reversion and XRP random entries — the same squeeze, from the same side.
 
 Adding the daily kill switch catches exactly this case: seven liquidations in the kill-switch-only arm, zero in the combined arm. The cap stops the common failure; the kill switch stops the one the cap can't see, which is "the market moved further than the cap assumed".
 

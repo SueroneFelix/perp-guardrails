@@ -161,6 +161,28 @@ def check_zh(failures: list[str]) -> int:
     return checked
 
 
+def check_ranges(failures: list[str]) -> int:
+    """The Result 2 claim that every 1x death was a short rests on price ranges."""
+    klines = ROOT / "data" / "klines"
+    symbols = ["SOLUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "ARBUSDT"]
+    files = [klines / f"{symbol}_1h.csv.gz" for symbol in symbols]
+    if not all(path.exists() for path in files):
+        print("SKIP  price ranges (data/klines not downloaded)")
+        return 0
+
+    checked = 0
+    for path in files:
+        close = pd.read_csv(path)["close"]
+        runup = float((close / close.cummin() - 1).max()) * 100
+        drawdown = float((close / close.cummax() - 1).min()) * 100
+        checked += 2
+        if runup < 200:
+            failures.append(f"{path.stem}: max run-up {runup:.0f}% breaks the 'at least 200%' claim")
+        if drawdown <= -100:
+            failures.append(f"{path.stem}: drawdown {drawdown:.0f}% would let a 1x long be wiped")
+    return checked
+
+
 def check_artifacts(failures: list[str]) -> int:
     article = (ROOT / "ARTICLE.md").read_text(encoding="utf-8")
     referenced = re.findall(r"results/figures/([A-Za-z0-9_]+\.png)", article)
@@ -191,7 +213,13 @@ def check_artifacts(failures: list[str]) -> int:
 
 def main() -> int:
     failures: list[str] = []
-    checked = check_table(failures) + check_prose(failures) + check_zh(failures) + check_artifacts(failures)
+    checked = (
+        check_table(failures)
+        + check_prose(failures)
+        + check_zh(failures)
+        + check_ranges(failures)
+        + check_artifacts(failures)
+    )
     for line in failures:
         print(f"FAIL  {line}")
     if failures:
