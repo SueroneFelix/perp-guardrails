@@ -214,6 +214,14 @@ BANNED = {
         "稳赚", "圣杯", "包赚", "必赚", "零风险", "无风险",
         "保证盈利", "躺赚", "财富自由", "稳赢",
     ),
+    "ARTICLE-02-leverage.md": (
+        "guaranteed", "risk-free", "risk free", "holy grail", "can't lose",
+        "get rich", "sure thing", "100% win", "riskless", "no risk",
+    ),
+    "ARTICLE-02-leverage.zh-CN.md": (
+        "稳赚", "圣杯", "包赚", "必赚", "零风险", "无风险",
+        "保证盈利", "躺赚", "财富自由", "稳赢",
+    ),
 }
 
 HEDGES = {
@@ -222,6 +230,13 @@ HEDGES = {
         "caveat", "not investment advice", "no adl",
     ),
     "ARTICLE.zh-CN.md": (
+        "简化", "局限", "不能", "无法", "假设", "不代表", "不是投资建议",
+    ),
+    "ARTICLE-02-leverage.md": (
+        "simplified", "limitation", "cannot", "does not", "assumption",
+        "caveat", "not investment advice", "no adl",
+    ),
+    "ARTICLE-02-leverage.zh-CN.md": (
         "简化", "局限", "不能", "无法", "假设", "不代表", "不是投资建议",
     ),
 }
@@ -251,14 +266,14 @@ def check_prose_hygiene(failures: list[str]) -> int:
         checked += 1
         paragraphs = _prose_paragraphs(text)
         if paragraphs:
-            if name == "ARTICLE.md":
-                longest = max(len(re.findall(r"[A-Za-z']+", p)) for p in paragraphs)
-                if longest > 220:
-                    failures.append(f"{name}: a paragraph runs {longest} words (wall of text)")
-            else:
+            if name.endswith(".zh-CN.md"):
                 longest = max(len(p) for p in paragraphs)
                 if longest > 450:
                     failures.append(f"{name}: a paragraph runs {longest} characters (wall of text)")
+            else:
+                longest = max(len(re.findall(r"[A-Za-z']+", p)) for p in paragraphs)
+                if longest > 220:
+                    failures.append(f"{name}: a paragraph runs {longest} words (wall of text)")
     return checked
 
 
@@ -290,6 +305,95 @@ def check_artifacts(failures: list[str]) -> int:
     return checked
 
 
+LEV = RESULTS / "leverage"
+LEV_ORDER = ("control", "cap_3x", "cap_2x", "cap_1x")
+
+
+def check_leverage(failures: list[str]) -> int:
+    """Study 2: re-derive the cap sweep and require both write-ups to match it."""
+    if not (LEV / "summary_overall.csv").exists():
+        failures.append("missing results/leverage/ (run `run.py run --configs ... --tag leverage`)")
+        return 0
+
+    checked = 0
+    summary = pd.read_csv(LEV / "summary_overall.csv").set_index("config")
+    per_symbol = pd.read_csv(LEV / "per_symbol.csv")
+    per_symbol = per_symbol[~per_symbol["benchmark"]]
+
+    absent = [name for name in LEV_ORDER if name not in summary.index]
+    checked += 1
+    if absent:
+        failures.append(f"results/leverage/summary_overall.csv is missing {absent}")
+        return checked
+
+    docs: dict[str, str] = {}
+    for name in ("ARTICLE-02-leverage.md", "ARTICLE-02-leverage.zh-CN.md"):
+        checked += 1
+        path = ROOT / name
+        if not path.exists():
+            failures.append(f"missing {name}")
+        else:
+            docs[name] = path.read_text(encoding="utf-8")
+
+    def expect(label: str, literal: str) -> None:
+        nonlocal checked
+        needle = normalise(literal)
+        for doc_name, text in docs.items():
+            checked += 1
+            if needle not in normalise(text):
+                failures.append(f"{doc_name}: {label} should read {literal!r}")
+
+    for config in LEV_ORDER:
+        rows = per_symbol[per_symbol["config"] == config]
+        ruined = int(rows["ruined"].sum())
+        equity = rows["final_equity"]
+        expect(f"ruin count for {config}", f"{ruined}/50")
+        expect(f"ruin rate for {config}", f"{ruined / 50 * 100:.0f}%")
+        expect(f"orders sent under {config}", f"{int(rows['orders'].sum()):,}")
+        checked += 1
+        if int(rows["cap_blocked"].sum()) != 0:
+            failures.append(f"{config}: cap_blocked should be 0 — the cap sizes, it does not reject")
+        checked += 1
+        if int((equity >= 10_000).sum()) > int((equity >= 5_000).sum()):
+            failures.append(f"{config}: more accounts above break-even than keeping half the capital")
+
+    def expect_in(doc: str, label: str, literal: str) -> None:
+        nonlocal checked
+        checked += 1
+        if doc in docs and normalise(literal) not in normalise(docs[doc]):
+            failures.append(f"{doc}: {label} should read {literal!r}")
+
+    one_x = per_symbol[per_symbol["config"] == "cap_1x"]["final_equity"]
+    kept_half = int((one_x >= 5_000).sum())
+    above = int((one_x >= 10_000).sum())
+    expect_in("ARTICLE-02-leverage.md", "accounts keeping half the capital at 1x", f"{kept_half} of 50")
+    expect_in("ARTICLE-02-leverage.md", "accounts above break-even at 1x", f"{above} ended above break-even")
+    expect_in("ARTICLE-02-leverage.zh-CN.md", "accounts keeping half the capital at 1x", f"{kept_half} 个保住一半以上")
+    expect_in("ARTICLE-02-leverage.zh-CN.md", "accounts above break-even at 1x", f"{above} 个跑赢本金")
+
+    expect("median final equity at 1x", f"${one_x.median():.0f}")
+    expect("best 1x return", f"{per_symbol.loc[per_symbol['config'] == 'cap_1x', 'total_return'].max() * 100:+.0f}%")
+
+    study1 = pd.read_csv(RESULTS / "summary_overall.csv").set_index("config")
+    for config in ("control", "cap_1x"):
+        checked += 1
+        if config not in study1.index:
+            failures.append(f"results/summary_overall.csv is missing {config}")
+            continue
+        for column in ("ruin_rate", "cvar_5pct", "total_return"):
+            checked += 1
+            if abs(summary.loc[config, column] - study1.loc[config, column]) > 1e-9:
+                failures.append(
+                    f"{config}.{column} differs between study 1 and the leverage arm "
+                    f"({study1.loc[config, column]:.6f} vs {summary.loc[config, column]:.6f})"
+                )
+
+    checked += 1
+    if not (FIGURES / "fig4_leverage.png").exists():
+        failures.append("missing results/figures/fig4_leverage.png")
+    return checked
+
+
 def main() -> int:
     failures: list[str] = []
     checked = (
@@ -300,6 +404,7 @@ def main() -> int:
         + check_bars(failures)
         + check_prose_hygiene(failures)
         + check_artifacts(failures)
+        + check_leverage(failures)
     )
     for line in failures:
         print(f"FAIL  {line}")

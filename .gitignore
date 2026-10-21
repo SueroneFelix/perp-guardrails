@@ -14,8 +14,11 @@ results/*
 !results/run_meta*.json
 !results/figures/
 !results/figures/*.png
+!results/*/
 results/figures/*.svg
 results/equity_curves_sample*.csv
+results/*/equity_curves_sample*.csv
+results/*/*_subset.csv
 
 # internal go-to-market notes, not part of the published study
 LAUNCH.md

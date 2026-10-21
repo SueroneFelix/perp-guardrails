@@ -1,0 +1,73 @@
+{
+  "study_version": "0.2.0",
+  "gross": false,
+  "generated_at": "2026-10-21T06:49:26.461523+00:00",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "AVAXUSDT",
+    "LINKUSDT",
+    "ARBUSDT"
+  ],
+  "strategies": [
+    "ma_trend",
+    "bollinger_mr",
+    "donchian",
+    "funding_carry",
+    "random_entry",
+    "buy_hold"
+  ],
+  "configs": [
+    {
+      "name": "control",
+      "group": "main",
+      "leverage": 5.0,
+      "exposure_cap": null,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "cap_1x",
+      "group": "main",
+      "leverage": 5.0,
+      "exposure_cap": 1.0,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "cap_2x",
+      "group": "leverage",
+      "leverage": 5.0,
+      "exposure_cap": 2.0,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    },
+    {
+      "name": "cap_3x",
+      "group": "leverage",
+      "leverage": 5.0,
+      "exposure_cap": 3.0,
+      "daily_loss_limit": null,
+      "dedupe": false,
+      "dedupe_window_s": 30,
+      "duplicate_prob": 0.0
+    }
+  ],
+  "start": "2022-01-01T00:00:00Z",
+  "taker_fee": 0.0005,
+  "slippage": 0.0002,
+  "seed": 20260101,
+  "pandas": "3.0.6",
+  "numpy": "2.5.4"
+}

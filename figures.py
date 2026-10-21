@@ -183,11 +183,77 @@ def fig_dedupe(df: pd.DataFrame, per_symbol: pd.DataFrame) -> Path:
     return path
 
 
+def fig_leverage(df: pd.DataFrame, per_symbol: pd.DataFrame) -> Path:
+    caps = [5, 3, 2, 1]
+    names = ["control", "cap_3x", "cap_2x", "cap_1x"]
+    d = df.set_index("config").loc[names]
+    fin = per_symbol[per_symbol["config"].isin(names)]
+    keep_half, keep_all = [], []
+    for name in names:
+        equity = fin.loc[fin["config"] == name, "final_equity"]
+        keep_half.append((equity >= 5_000).mean() * 100)
+        keep_all.append((equity >= 10_000).mean() * 100)
+
+    fig, axes = plt.subplots(1, 2, figsize=(8.4, 3.4), gridspec_kw={"width_ratios": [1, 1.15]})
+    labels = [f"{c}x" for c in caps]
+
+    bars = axes[0].bar(labels, (d["ruin_rate"] * 100).tolist(), color="#c0392b", width=0.55)
+    for bar, rate in zip(bars, d["ruin_rate"]):
+        axes[0].text(
+            bar.get_x() + bar.get_width() / 2, rate * 100 + 2,
+            f"{rate * 100:.0f}%\n{int(round(rate * 50))}/50",
+            ha="center", va="bottom", fontsize=8.5, color=INK, linespacing=1.2,
+        )
+    axes[0].set_ylim(0, 98)
+    axes[0].set_ylabel("accounts that hit zero equity (%)")
+    axes[0].set_xlabel("leverage cap")
+    axes[0].set_title("Ruin falls at every step - never to zero", loc="left", fontsize=10)
+    _clean(axes[0])
+
+    width = 0.38
+    x = np.arange(len(caps))
+    axes[1].bar(x - width / 2, keep_half, width, label="kept half the capital", color="#2d6cdf")
+    axes[1].bar(x + width / 2, keep_all, width, label="ended above break-even", color="#1e8449")
+    for i, (half, all_) in enumerate(zip(keep_half, keep_all)):
+        if half or all_:
+            axes[1].text(i - width / 2, half + 0.6, f"{half:.0f}%", ha="center", fontsize=8.5, color="#2d6cdf")
+            axes[1].text(i + width / 2, all_ + 0.6, f"{all_:.0f}%", ha="center", fontsize=8.5, color="#1e8449")
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(labels)
+    axes[1].set_ylim(0, 20)
+    axes[1].set_ylabel("share of the 50 accounts (%)")
+    axes[1].set_xlabel("leverage cap")
+    axes[1].legend(frameon=False, fontsize=8, loc="upper left")
+    axes[1].set_title("...but surviving is not the same as keeping money", loc="left", fontsize=10)
+    _clean(axes[1])
+
+    fig.suptitle(
+        "Leverage cap sweep, same 50 accounts, 2022-2025",
+        x=0.012, ha="left", fontsize=11, color=INK,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    path = OUT / "fig4_leverage.png"
+    fig.savefig(path, dpi=200)
+    fig.savefig(path.with_suffix(".svg"), metadata={"Date": None})
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(RESULTS / "summary_overall.csv")
     per_symbol = pd.read_csv(RESULTS / "per_symbol.csv")
-    for path in (fig_survival(df), fig_tail(df), fig_dedupe(df, per_symbol)):
+    written = [fig_survival(df), fig_tail(df), fig_dedupe(df, per_symbol)]
+
+    lev_dir = RESULTS / "leverage"
+    if (lev_dir / "summary_overall.csv").exists():
+        written.append(
+            fig_leverage(
+                pd.read_csv(lev_dir / "summary_overall.csv"),
+                pd.read_csv(lev_dir / "per_symbol.csv"),
+            )
+        )
+    for path in written:
         print(f"wrote {path.relative_to(ROOT)}")
 
 

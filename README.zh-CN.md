@@ -7,6 +7,14 @@
 
 本仓库是 **QuantEngine Guard** 的信任起点：在对任何客户说"风控有用"之前，先把这句话变成一个别人能自己跑出来的数字。
 
+## 研究索引
+
+| # | 问题 | 文章 | 数据 |
+|---|---|---|---|
+| 01 | 策略固定时，风控是否决定了谁活下来？ | [英文](ARTICLE.md) · [中文](ARTICLE.zh-CN.md) | `results/summary_overall.csv` |
+| 02 | 杠杆上限是旋钮还是悬崖？5x → 3x → 2x → 1x，爆仓 41 → 28 → 21 → 9；但**直到 1x 才有账户保住一半本金**。 | [英文](ARTICLE-02-leverage.md) · [中文](ARTICLE-02-leverage.zh-CN.md) | `results/leverage/summary_overall.csv` |
+| 03 | 重复下单是"有没有"重要，还是"比例"重要？ | 计划中 | — |
+
 ---
 
 ## 结论（W3 定稿）

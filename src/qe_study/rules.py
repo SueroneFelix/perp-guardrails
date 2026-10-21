@@ -54,6 +54,14 @@ DUP_CONFIGS: tuple[GuardConfig, ...] = (
     ),
 )
 
+# Study 2 (v0.2) — how far down does the cap have to go?
+# Runs alongside control (5x) and cap_1x from the main matrix; reusing those
+# two arms makes their numbers a cross-check against study 1.
+LEVERAGE_CONFIGS: tuple[GuardConfig, ...] = (
+    GuardConfig(name="cap_2x", group="leverage", exposure_cap=2.0),
+    GuardConfig(name="cap_3x", group="leverage", exposure_cap=3.0),
+)
+
 CONFIGS: tuple[GuardConfig, ...] = MAIN_CONFIGS + DUP_CONFIGS
-CONFIG_BY_NAME = {cfg.name: cfg for cfg in CONFIGS}
+CONFIG_BY_NAME = {cfg.name: cfg for cfg in CONFIGS + LEVERAGE_CONFIGS}
 

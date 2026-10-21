@@ -45,12 +45,19 @@ def cmd_run(args: argparse.Namespace) -> None:
     configs = [CONFIG_BY_NAME[name] for name in config_names]
 
     start_ms = data.ms(args.start) if args.start else data.START_MS
+    if args.configs and not args.tag:
+        raise SystemExit(
+            "--configs needs --tag: a partial matrix would overwrite the published tables"
+        )
     if args.symbols or args.start:
         # subset runs must not overwrite the published full-matrix tables
         suffix = ("_gross" if args.gross else "") + "_subset"
         print("[run] subset run -> results/*_subset.csv (full matrix untouched)", file=sys.stderr)
     else:
         suffix = "_gross" if args.gross else ""
+    out_dir = RESULTS / args.tag if args.tag else RESULTS
+    if args.tag:
+        print(f"[run] tagged run -> {out_dir.relative_to(ROOT)}/", file=sys.stderr)
     if args.gross:
         # sanity check: same signals, zero fees/slippage/funding
         C.TAKER_FEE = 0.0
@@ -108,22 +115,22 @@ def cmd_run(args: argparse.Namespace) -> None:
         raise SystemExit("no results — check data availability")
 
     per_symbol = pd.DataFrame(rows)
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    per_symbol.to_csv(RESULTS / f"per_symbol{suffix}.csv", index=False)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    per_symbol.to_csv(out_dir / f"per_symbol{suffix}.csv", index=False)
 
     under_test = per_symbol[~per_symbol["benchmark"]]
     benchmarks = per_symbol[per_symbol["benchmark"]]
 
     by_strategy = _aggregate(under_test, ["strategy", "config"])
-    by_strategy.to_csv(RESULTS / f"summary_by_strategy{suffix}.csv", index=False)
+    by_strategy.to_csv(out_dir / f"summary_by_strategy{suffix}.csv", index=False)
     overall = _aggregate(under_test, ["group", "config"])
-    overall.to_csv(RESULTS / f"summary_overall{suffix}.csv", index=False)
+    overall.to_csv(out_dir / f"summary_overall{suffix}.csv", index=False)
     bench_summary = _aggregate(benchmarks, ["config"]) if len(benchmarks) else pd.DataFrame()
     if len(bench_summary):
-        bench_summary.to_csv(RESULTS / f"summary_benchmark{suffix}.csv", index=False)
+        bench_summary.to_csv(out_dir / f"summary_benchmark{suffix}.csv", index=False)
 
     if curves:
-        pd.DataFrame(curves).to_csv(RESULTS / f"equity_curves_sample{suffix}.csv")
+        pd.DataFrame(curves).to_csv(out_dir / f"equity_curves_sample{suffix}.csv")
 
     meta = {
         "study_version": C.STUDY_VERSION,
@@ -139,7 +146,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         "pandas": pd.__version__,
         "numpy": np.__version__,
     }
-    (RESULTS / f"run_meta{suffix}.json").write_text(json.dumps(meta, indent=2))
+    (out_dir / f"run_meta{suffix}.json").write_text(json.dumps(meta, indent=2))
 
     _print_table(overall, "UNDER TEST (mean across strategy x symbol)", group="group")
     _print_table(by_strategy, "BY STRATEGY (mean across symbols)", group="strategy")
@@ -194,6 +201,10 @@ def main(argv: list[str] | None = None) -> None:
     p_run.add_argument("--configs")
     p_run.add_argument("--start", help="ISO date, e.g. 2024-01-01T00:00:00Z")
     p_run.add_argument("--gross", action="store_true", help="zero fees, slippage and funding")
+    p_run.add_argument(
+        "--tag",
+        help="write into results/<tag>/ instead of results/ (required with --configs)",
+    )
     p_run.set_defaults(func=cmd_run)
 
     args = parser.parse_args(argv)

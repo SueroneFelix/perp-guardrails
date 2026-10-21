@@ -3,7 +3,7 @@
 Any change here invalidates published results — bump STUDY_VERSION instead.
 """
 
-STUDY_VERSION = "0.1.0"
+STUDY_VERSION = "0.2.0"
 EXCHANGE = "binance-usdm-perpetual"
 INTERVAL = "1h"
 
