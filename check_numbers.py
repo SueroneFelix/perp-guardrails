@@ -132,6 +132,35 @@ def check_prose(failures: list[str]) -> int:
     return checked
 
 
+def check_zh(failures: list[str]) -> int:
+    overall, under = load()
+    dup = under[under["config"] == "dup_nodedupe"]
+    text = normalise((ROOT / "ARTICLE.zh-CN.md").read_text(encoding="utf-8"))
+
+    def pct(config: str, column: str, digits: int = 1) -> str:
+        return f"{float(overall.loc[config, column]) * 100:.{digits}f}".replace(".0", "") + "%"
+
+    claims = [
+        Claim("control ruin rate", pct("control", "ruin_rate", 0), "ARTICLE.zh-CN.md"),
+        Claim("capped ruin rate", pct("cap_1x", "ruin_rate", 0), "ARTICLE.zh-CN.md"),
+        Claim("uncapped tail", pct("control", "cvar_5pct"), "ARTICLE.zh-CN.md"),
+        Claim("capped tail", pct("cap_1x", "cvar_5pct"), "ARTICLE.zh-CN.md"),
+        Claim("combined tail", pct("all", "cvar_5pct"), "ARTICLE.zh-CN.md"),
+        Claim("kill-only return", pct("kill_5pct", "total_return"), "ARTICLE.zh-CN.md"),
+        Claim("kill-only halts", str(int(overall.loc["kill_5pct", "halts"])), "ARTICLE.zh-CN.md"),
+        Claim("duplicate mean peak exposure", f"{dup['max_gross_leverage'].mean():.1f}x", "ARTICLE.zh-CN.md"),
+        Claim("duplicate worst peak exposure", f"{dup['max_gross_leverage'].max():.1f}x", "ARTICLE.zh-CN.md"),
+        Claim("duplicate ruin rate", pct("dup_nodedupe", "ruin_rate", 0), "ARTICLE.zh-CN.md"),
+    ]
+
+    checked = 0
+    for claim in claims:
+        checked += 1
+        if not claim.ok(text):
+            failures.append(f"ARTICLE.zh-CN.md: {claim.label} should read {claim.computed!r}")
+    return checked
+
+
 def check_artifacts(failures: list[str]) -> int:
     article = (ROOT / "ARTICLE.md").read_text(encoding="utf-8")
     referenced = re.findall(r"results/figures/([A-Za-z0-9_]+\.png)", article)
@@ -162,7 +191,7 @@ def check_artifacts(failures: list[str]) -> int:
 
 def main() -> int:
     failures: list[str] = []
-    checked = check_table(failures) + check_prose(failures) + check_artifacts(failures)
+    checked = check_table(failures) + check_prose(failures) + check_zh(failures) + check_artifacts(failures)
     for line in failures:
         print(f"FAIL  {line}")
     if failures:
