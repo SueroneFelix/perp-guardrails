@@ -1,6 +1,6 @@
 # We ran 50 crypto perpetual strategies through the same four years. The guardrails, not the strategies, decided who survived.
 
-*An ablation study on 1.7 million hourly bars, reproducible from public Binance data in about ten minutes.*
+*An ablation study on 340,000 hourly bars across 10 Binance perps, reproducible from public data in about ten minutes.*
 
 **TL;DR** — Holding five deliberately naive strategies fixed and varying only the guardrails, over 50 strategy × market combinations and four years:
 

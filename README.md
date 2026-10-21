@@ -46,7 +46,7 @@ And the result nobody wants to publish: **a daily kill switch on its own, at 5x,
 | Execution | Signal on bar close, filled at **next bar open**; no look-ahead |
 | Sizing | Fixed at entry, not rebalanced bar-by-bar |
 
-Bar count: 339,921 per strategy (ARB starts 2023-03-23) → ~1.7M hourly bars in total.
+Bar count: 339,921 per strategy (ARB starts 2023-03-23) → ~1.7M bar evaluations across the five strategies.
 
 ### Strategies (all naive, all public)
 

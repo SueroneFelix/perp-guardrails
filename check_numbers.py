@@ -183,6 +183,27 @@ def check_ranges(failures: list[str]) -> int:
     return checked
 
 
+def check_bars(failures: list[str]) -> int:
+    """The subtitle's bar count has to match the klines actually shipped."""
+    klines = ROOT / "data" / "klines"
+    files = sorted(klines.glob("*_1h.csv.gz"))
+    if len(files) != 10:
+        print("SKIP  bar count (data/klines incomplete)")
+        return 0
+
+    bars = sum(len(pd.read_csv(path, usecols=["close"])) for path in files)
+    rounded = f"{round(bars, -4):,}"
+    checked = 3
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    if f"{bars:,}" not in readme:
+        failures.append(f"README.md: per-strategy bar count should be {bars:,}")
+    if f"{rounded} hourly bars" not in (ROOT / "ARTICLE.md").read_text(encoding="utf-8"):
+        failures.append(f"ARTICLE.md: subtitle should state {rounded} hourly bars")
+    if "34 万根" not in (ROOT / "ARTICLE.zh-CN.md").read_text(encoding="utf-8"):
+        failures.append("ARTICLE.zh-CN.md: intro should state 34 万根")
+    return checked
+
+
 BANNED = {
     "ARTICLE.md": (
         "guaranteed", "risk-free", "risk free", "holy grail", "can't lose",
@@ -275,6 +296,7 @@ def main() -> int:
         + check_prose(failures)
         + check_zh(failures)
         + check_ranges(failures)
+        + check_bars(failures)
         + check_prose_hygiene(failures)
         + check_artifacts(failures)
     )
