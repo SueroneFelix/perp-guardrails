@@ -4,10 +4,10 @@
 
 **TL;DR** — Holding five deliberately naive strategies fixed and varying only the guardrails, over 50 strategy × market combinations and four years:
 
-- **No guardrails at 5x: 41 of 50 accounts hit zero.** A 1x exposure cap cut that to 9 of 50. With a daily kill switch on top: **0 of 50**.
-- **Tail risk (CVaR 5%) went from −60.9% to −6.7%** of equity per bad day.
+- **No guardrails at 5x: 41 of 50 accounts hit zero.** A 1x exposure cap cut that to 9 of 50 (`cap_1x`); adding a daily kill switch on top gave **0 of 50**.
+- **Tail risk (daily CVaR 5%) went from −60.9% to −9.9% with the cap alone, and −6.7% with both rules.**
 - **A daily kill switch on its own, at 5x, made returns worse** — it fired 33,178 times and turned sudden ruin into a slow bleed. The leverage cap does the work; the breaker only catches what the cap can't see.
-- **10% duplicate orders took a 1x account to 3.9x exposure** and raised the ruin rate from 18% to 34%. Deduplication is a survival feature, not a nicety.
+- **Re-executing just 10% of orders pushed every one of the 50 accounts past 2x** (mean peak 3.9x, worst 10.2x) and raised the ruin rate from 18% to 34%. Deduplication is a survival feature, not a nicety.
 
 ---
 
@@ -98,11 +98,15 @@ Ten percent duplicate traffic, at 1x, no other rules:
 
 | | No dedupe | Dedupe |
 |---|---|---|
-| Peak gross exposure | **3.9x** | 1.0x |
+| Mean peak gross exposure | **3.9x** | 1.0x |
+| Worst peak gross exposure | **10.2x** | 1.0x |
+| Accounts that ever exceeded 2x | **50 of 50** | 0 of 50 |
 | Ruin rate | **34%** | 18% |
 | Mean total return | −85.1% | −78.2% |
 
-A single retried webhook doubled the position, repeatedly. The account that was supposed to be running at 1x spent part of its life at nearly 4x, and one in three of those accounts died.
+A single retried webhook doubled the position, and then did it again. The account that was supposed to be running at 1x spent part of its life above 2x — all fifty of them did, and the worst reached 10.2x. One in three of those accounts died. The deduplicated arm never left 1.0x.
+
+There is no trade-off here: the deduplicated arm is better on exposure, ruin and return at the same time. Part of that is luck — four years in which doubling into a move rarely paid — so do not read it as an edge. Deduplication is a correctness feature that happens to also save money.
 
 Deduplication is the least glamorous feature in any trading system. It is also the one that decides whether "I'm running at 1x" is a fact or a hope.
 

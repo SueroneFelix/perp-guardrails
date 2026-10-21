@@ -14,7 +14,7 @@ results/*
 !results/run_meta*.json
 !results/figures/
 !results/figures/*.png
-!results/figures/*.svg
+results/figures/*.svg
 results/equity_curves_sample*.csv
 
 # internal go-to-market notes, not part of the published study

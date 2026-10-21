@@ -18,14 +18,14 @@ A fully public, reproducible empirical study: public market data, public code, e
 | `cap_1x` — exposure cap only | −78.2% | 18% | −9.9% | remaining ruin = 1x shorts squeezed |
 | `kill_5pct` — daily kill switch only | −99.6% | 14% | −18.2% | 33,178 halts; ruin traded for slow bleed |
 | `all` — cap + kill switch | −72.3% | **0%** | −6.7% | no account hit zero |
-| `dup_nodedupe` — duplicate orders executed | −85.1% | 34% | −12.3% | peak gross exposure 3.9x |
+| `dup_nodedupe` — duplicate orders executed | −85.1% | 34% | −12.3% | mean peak 3.9x, worst 10.2x; all 50 above 2x |
 | `dup_dedupe` — duplicate orders blocked | −78.2% | 18% | −9.9% | back to the 1x baseline |
 
 Three things the data supports:
 
 1. **The exposure cap does almost all of the work.** Ruin 82% → 18%; CVaR −61% → −10%.
 2. **A cap alone is not enough.** Every remaining failure at 1x was a short position; 7 of 9 were the funding-carry strategy shorting into rallies. Cap + kill switch: 0/50.
-3. **Idempotency is not cosmetic.** Re-executing 10% of orders pushed a 1x account to 3.9x peak exposure and moved ruin from 18% to 34%.
+3. **Idempotency is not cosmetic.** Re-executing 10% of orders pushed **all 50 accounts above 2x** (mean peak 3.9x, worst 10.2x) and moved ruin from 18% to 34%.
 
 And the result nobody wants to publish: **a daily kill switch on its own, at 5x, made returns worse.** At that leverage a −5% daily limit is a ~1% price move, so the breaker fires on noise (33,178 times). Lower the leverage first; the breaker is for the outlier, not the ordinary Tuesday.
 
@@ -100,14 +100,17 @@ python run.py validate           # asserts zero gaps in every series
 python run.py run                # full matrix -> results/*.csv
 python run.py run --gross        # same signals, zero costs, as a control
 python -m unittest discover -s tests -v
+python check_numbers.py          # every number in README/ARTICLE vs results/*.csv
 ```
 
 Optional figures (needs `requirements-figures.txt`):
 
 ```bash
 uv pip install -r requirements-figures.txt
-python figures.py                # results/figures/*.png + *.svg
+python figures.py                # results/figures/*.png (SVGs are written but not committed)
 ```
+
+The PNGs are byte-reproducible; matplotlib's SVG output is not (random clip-path ids), so only PNGs are tracked. `check_numbers.py` verifies every figure the article references actually exists.
 
 Subset runs write to `results/*_subset.csv` and never overwrite the published tables:
 
@@ -151,6 +154,7 @@ results/
 
 ```
 run.py                  # entry point (no install needed)
+check_numbers.py        # fails if the write-up drifts from results/*.csv
 figures.py              # renders the article figures from results/*.csv
 rules.schema.json       # machine-readable rule semantics used in the simulation
 src/qe_study/

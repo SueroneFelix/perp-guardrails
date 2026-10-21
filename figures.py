@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
+import numpy as np
 import pandas as pd
 
 matplotlib.use("Agg")
@@ -86,7 +87,7 @@ def fig_survival(df: pd.DataFrame) -> Path:
     fig.tight_layout()
     path = OUT / "fig1_ruin_rate.png"
     fig.savefig(path, dpi=200)
-    fig.savefig(path.with_suffix(".svg"))
+    fig.savefig(path.with_suffix(".svg"), metadata={"Date": None})
     plt.close(fig)
     return path
 
@@ -128,22 +129,38 @@ def fig_tail(df: pd.DataFrame) -> Path:
     fig.tight_layout()
     path = OUT / "fig2_tail.png"
     fig.savefig(path, dpi=200)
-    fig.savefig(path.with_suffix(".svg"))
+    fig.savefig(path.with_suffix(".svg"), metadata={"Date": None})
     plt.close(fig)
     return path
 
 
-def fig_dedupe(df: pd.DataFrame) -> Path:
-    d = df[df["group"] == "dup"].set_index("config").loc[["dup_nodedupe", "dup_dedupe"]]
-    fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.1))
+def fig_dedupe(df: pd.DataFrame, per_symbol: pd.DataFrame) -> Path:
+    order = ["dup_nodedupe", "dup_dedupe"]
+    d = df[df["group"] == "dup"].set_index("config").loc[order]
+    worst = (
+        per_symbol[per_symbol["group"] == "dup"]
+        .groupby("config")["max_gross_leverage"]
+        .max()
+        .loc[order]
+    )
+    mean = d["max_gross_leverage"]
+    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.3))
 
     labels = ["no dedupe", "with dedupe"]
     colors = [COLORS[c] for c in d.index]
 
-    bars = axes[0].bar(labels, d["max_gross_leverage"], color=colors, width=0.5)
-    for bar, v in zip(bars, d["max_gross_leverage"]):
-        axes[0].text(bar.get_x() + bar.get_width() / 2, v + 0.08, f"{v:.1f}x", ha="center", fontsize=9.5, color=INK)
-    axes[0].set_ylim(0, 4.6)
+    bars = axes[0].bar(
+        labels, mean, color=colors, width=0.45,
+        yerr=[np.zeros(len(mean)), (worst - mean).clip(lower=0)],
+        capsize=4, ecolor=INK, error_kw={"linewidth": 1.1},
+    )
+    for bar, m, w in zip(bars, mean, worst):
+        axes[0].text(
+            bar.get_x() + bar.get_width() / 2, w + 0.3,
+            f"mean {m:.1f}x\nworst {w:.1f}x",
+            ha="center", va="bottom", fontsize=8.5, color=INK, linespacing=1.25,
+        )
+    axes[0].set_ylim(0, 13.5)
     axes[0].set_ylabel("peak gross exposure (x equity)")
     axes[0].set_title("What 10% duplicate orders do to size", loc="left", fontsize=10)
     _clean(axes[0])
@@ -161,7 +178,7 @@ def fig_dedupe(df: pd.DataFrame) -> Path:
     fig.tight_layout()
     path = OUT / "fig3_dedupe.png"
     fig.savefig(path, dpi=200)
-    fig.savefig(path.with_suffix(".svg"))
+    fig.savefig(path.with_suffix(".svg"), metadata={"Date": None})
     plt.close(fig)
     return path
 
@@ -169,7 +186,8 @@ def fig_dedupe(df: pd.DataFrame) -> Path:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(RESULTS / "summary_overall.csv")
-    for path in (fig_survival(df), fig_tail(df), fig_dedupe(df)):
+    per_symbol = pd.read_csv(RESULTS / "per_symbol.csv")
+    for path in (fig_survival(df), fig_tail(df), fig_dedupe(df, per_symbol)):
         print(f"wrote {path.relative_to(ROOT)}")
 
 
