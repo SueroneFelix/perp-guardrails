@@ -67,6 +67,10 @@ def cmd_run(args: argparse.Namespace) -> None:
     curves: dict[str, pd.Series] = {}
 
     for symbol in symbols:
+        if not data.kline_path(symbol).exists():
+            print(f"[run] {symbol}: not downloaded — run `python run.py download` first",
+                  file=sys.stderr)
+            continue
         df_full, funding_full = data.load(symbol)
         mask = df_full["open_time"].to_numpy(dtype="int64") >= start_ms
         df = df_full.loc[mask].reset_index(drop=True)
