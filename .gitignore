@@ -19,3 +19,4 @@ results/equity_curves_sample*.csv
 
 # internal go-to-market notes, not part of the published study
 LAUNCH.md
+RELEASE_CHECKLIST.md
