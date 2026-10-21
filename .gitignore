@@ -22,4 +22,6 @@ results/*/*_subset.csv
 
 # internal go-to-market notes, not part of the published study
 LAUNCH.md
+LAUNCH-*.md
 RELEASE_CHECKLIST.md
+OFFER-*.md
