@@ -183,6 +183,63 @@ def check_ranges(failures: list[str]) -> int:
     return checked
 
 
+BANNED = {
+    "ARTICLE.md": (
+        "guaranteed", "risk-free", "risk free", "holy grail", "can't lose",
+        "get rich", "sure thing", "100% win", "riskless", "no risk",
+    ),
+    "ARTICLE.zh-CN.md": (
+        "稳赚", "圣杯", "包赚", "必赚", "零风险", "无风险",
+        "保证盈利", "躺赚", "财富自由", "稳赢",
+    ),
+}
+
+HEDGES = {
+    "ARTICLE.md": (
+        "simplified", "limitation", "cannot", "does not", "assumption",
+        "caveat", "not investment advice", "no adl",
+    ),
+    "ARTICLE.zh-CN.md": (
+        "简化", "局限", "不能", "无法", "假设", "不代表", "不是投资建议",
+    ),
+}
+
+
+def _prose_paragraphs(text: str) -> list[str]:
+    blocks = (block.strip() for block in text.split("\n\n"))
+    return [b for b in blocks if b and not b.startswith(("#", "|", "!", "`", ">"))]
+
+
+def check_prose_hygiene(failures: list[str]) -> int:
+    """Selling language and hedging: the parts a number checker cannot see."""
+    checked = 0
+    for name, words in BANNED.items():
+        text = (ROOT / name).read_text(encoding="utf-8")
+        lowered = text.lower()
+        checked += 1
+        for word in words:
+            if word in lowered:
+                failures.append(f"{name}: banned selling phrase '{word}'")
+
+        checked += 1
+        hedges = sum(lowered.count(word) for word in HEDGES[name])
+        if hedges < 3:
+            failures.append(f"{name}: only {hedges} self-limitation phrases (need >= 3)")
+
+        checked += 1
+        paragraphs = _prose_paragraphs(text)
+        if paragraphs:
+            if name == "ARTICLE.md":
+                longest = max(len(re.findall(r"[A-Za-z']+", p)) for p in paragraphs)
+                if longest > 220:
+                    failures.append(f"{name}: a paragraph runs {longest} words (wall of text)")
+            else:
+                longest = max(len(p) for p in paragraphs)
+                if longest > 450:
+                    failures.append(f"{name}: a paragraph runs {longest} characters (wall of text)")
+    return checked
+
+
 def check_artifacts(failures: list[str]) -> int:
     article = (ROOT / "ARTICLE.md").read_text(encoding="utf-8")
     referenced = re.findall(r"results/figures/([A-Za-z0-9_]+\.png)", article)
@@ -218,6 +275,7 @@ def main() -> int:
         + check_prose(failures)
         + check_zh(failures)
         + check_ranges(failures)
+        + check_prose_hygiene(failures)
         + check_artifacts(failures)
     )
     for line in failures:
