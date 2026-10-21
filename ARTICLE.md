@@ -1,8 +1,8 @@
 # We ran 50 crypto perpetual strategies through the same four years. The guardrails, not the strategies, decided who survived.
 
-*An ablation study on 340,000 hourly bars across 10 Binance perps, reproducible from public data in about ten minutes.*
+*An ablation study over 50 strategy × market combinations on 10 Binance perps — 17 million bar evaluations, reproducible from public data in about ten minutes.*
 
-**TL;DR** — Holding five deliberately naive strategies fixed and varying only the guardrails, over 50 strategy × market combinations and four years:
+**TL;DR** — Five deliberately naive strategies, held fixed while only the guardrails vary, over four years and ten markets:
 
 - **No guardrails at 5x: 41 of 50 accounts hit zero.** A 1x exposure cap cut that to 9 of 50 (`cap_1x`); adding a daily kill switch on top gave **0 of 50**.
 - **Tail risk (daily CVaR 5%) went from −60.9% to −9.9% with the cap alone, and −6.7% with both rules.**

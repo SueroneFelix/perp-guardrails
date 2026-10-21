@@ -184,7 +184,7 @@ def check_ranges(failures: list[str]) -> int:
 
 
 def check_bars(failures: list[str]) -> int:
-    """The subtitle's bar count has to match the klines actually shipped."""
+    """The subtitle's evaluation count has to match the klines actually shipped."""
     klines = ROOT / "data" / "klines"
     files = sorted(klines.glob("*_1h.csv.gz"))
     if len(files) != 10:
@@ -192,15 +192,16 @@ def check_bars(failures: list[str]) -> int:
         return 0
 
     bars = sum(len(pd.read_csv(path, usecols=["close"])) for path in files)
-    rounded = f"{round(bars, -4):,}"
+    combinations = 10 * 5
+    millions = round(bars * combinations / 1e6)
     checked = 3
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     if f"{bars:,}" not in readme:
         failures.append(f"README.md: per-strategy bar count should be {bars:,}")
-    if f"{rounded} hourly bars" not in (ROOT / "ARTICLE.md").read_text(encoding="utf-8"):
-        failures.append(f"ARTICLE.md: subtitle should state {rounded} hourly bars")
-    if "34 万根" not in (ROOT / "ARTICLE.zh-CN.md").read_text(encoding="utf-8"):
-        failures.append("ARTICLE.zh-CN.md: intro should state 34 万根")
+    if f"{millions} million bar evaluations" not in (ROOT / "ARTICLE.md").read_text(encoding="utf-8"):
+        failures.append(f"ARTICLE.md: subtitle should state {millions} million bar evaluations")
+    if f"{millions * 100} 万次" not in (ROOT / "ARTICLE.zh-CN.md").read_text(encoding="utf-8"):
+        failures.append(f"ARTICLE.zh-CN.md: intro should state {millions * 100} 万次 bar 评估")
     return checked
 
 
