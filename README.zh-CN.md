@@ -13,7 +13,7 @@
 |---|---|---|---|
 | 01 | 策略固定时，风控是否决定了谁活下来？ | [英文](ARTICLE.md) · [中文](ARTICLE.zh-CN.md) | `results/summary_overall.csv` |
 | 02 | 杠杆上限是旋钮还是悬崖？5x → 3x → 2x → 1x，爆仓 41 → 28 → 21 → 9；但**直到 1x 才有账户保住一半本金**。 | [英文](ARTICLE-02-leverage.md) · [中文](ARTICLE-02-leverage.zh-CN.md) | `results/leverage/summary_overall.csv` |
-| 03 | 重复下单是"有没有"重要，还是"比例"重要？ | 计划中 | — |
+| 03 | 重复下单是"有没有"重要，还是"比例"重要？**1% 的重复率就让 50 个账户全部越过 2x**，爆仓仍只有 20%；拐点在 10%（34%）和 20%（44%）。 | [英文](ARTICLE-03-dup-rate.md) · [中文](ARTICLE-03-dup-rate.zh-CN.md) | `results/dup_rate/per_symbol.csv` |
 
 ---
 

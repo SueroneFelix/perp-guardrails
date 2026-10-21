@@ -239,6 +239,66 @@ def fig_leverage(df: pd.DataFrame, per_symbol: pd.DataFrame) -> Path:
     return path
 
 
+def fig_dup_rate(per_symbol: pd.DataFrame) -> Path:
+    order = ["dup_0pct", "dup_1pct", "dup_5pct", "dup_nodedupe", "dup_20pct"]
+    rates = [0, 1, 5, 10, 20]
+    stats = []
+    for name in order:
+        rows = per_symbol[per_symbol["config"] == name]
+        stats.append((
+            rows["max_gross_leverage"].mean(),
+            rows["max_gross_leverage"].max(),
+            rows["ruined"].mean() * 100,
+        ))
+    mean_peak, worst_peak, ruin = zip(*stats)
+
+    fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.5))
+    labels = [f"{rate}%" for rate in rates]
+
+    bars = axes[0].bar(labels, mean_peak, color="#2d6cdf", width=0.55, label="mean peak exposure")
+    axes[0].plot(labels, worst_peak, linestyle="none", marker="_", markersize=13,
+                 markeredgewidth=2.2, color="#c0392b", label="worst account")
+    for bar, mean, worst in zip(bars, mean_peak, worst_peak):
+        label = f"{mean:.1f}x" if worst - mean < 0.2 else f"{mean:.1f}x mean"
+        axes[0].text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.25,
+                     label, ha="center", fontsize=8.5, color="#2d6cdf")
+        if worst - mean >= 0.2:
+            axes[0].text(bar.get_x() + bar.get_width() / 2, worst + 0.35,
+                         f"{worst:.1f}x", ha="center", fontsize=8.5, color="#c0392b")
+    axes[0].axhline(1.0, color=INK, linewidth=0.9, linestyle=":")
+    axes[0].set_ylim(0, 17)
+    axes[0].set_ylabel("peak gross exposure (x equity)")
+    axes[0].set_xlabel("share of orders re-sent")
+    axes[0].set_title("The 1x claim breaks at 1%", loc="left", fontsize=10)
+    axes[0].legend(frameon=False, fontsize=8, loc="upper left")
+    _clean(axes[0])
+
+    bars = axes[1].bar(labels, ruin, color="#c0392b", width=0.55)
+    for bar, value in zip(bars, ruin):
+        axes[1].text(bar.get_x() + bar.get_width() / 2, value + 1.2, f"{value:.0f}%",
+                     ha="center", fontsize=8.5, color=INK)
+    axes[1].axhline(ruin[0], color=INK, linewidth=0.9, linestyle="--")
+    axes[1].annotate(
+        "no duplicates", (4.35, ruin[0] - 4), fontsize=8, color=INK, ha="right",
+    )
+    axes[1].set_ylim(0, 55)
+    axes[1].set_ylabel("accounts that hit zero equity (%)")
+    axes[1].set_xlabel("share of orders re-sent")
+    axes[1].set_title("The account breaks at 10%", loc="left", fontsize=10)
+    _clean(axes[1])
+
+    fig.suptitle(
+        "Duplicate-order rate, 50 accounts at 1x, 2022-2025",
+        x=0.012, ha="left", fontsize=11, color=INK,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    path = OUT / "fig5_dup_rate.png"
+    fig.savefig(path, dpi=200)
+    fig.savefig(path.with_suffix(".svg"), metadata={"Date": None})
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(RESULTS / "summary_overall.csv")
@@ -254,6 +314,11 @@ def main() -> None:
             )
         )
     for path in written:
+        print(f"wrote {path.relative_to(ROOT)}")
+
+    dup_dir = RESULTS / "dup_rate"
+    if (dup_dir / "per_symbol.csv").exists():
+        path = fig_dup_rate(pd.read_csv(dup_dir / "per_symbol.csv"))
         print(f"wrote {path.relative_to(ROOT)}")
 
 

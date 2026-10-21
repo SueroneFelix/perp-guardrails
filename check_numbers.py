@@ -16,6 +16,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
@@ -222,6 +223,14 @@ BANNED = {
         "稳赚", "圣杯", "包赚", "必赚", "零风险", "无风险",
         "保证盈利", "躺赚", "财富自由", "稳赢",
     ),
+    "ARTICLE-03-dup-rate.md": (
+        "guaranteed", "risk-free", "risk free", "holy grail", "can't lose",
+        "get rich", "sure thing", "100% win", "riskless", "no risk",
+    ),
+    "ARTICLE-03-dup-rate.zh-CN.md": (
+        "稳赚", "圣杯", "包赚", "必赚", "零风险", "无风险",
+        "保证盈利", "躺赚", "财富自由", "稳赢",
+    ),
 }
 
 HEDGES = {
@@ -237,6 +246,13 @@ HEDGES = {
         "caveat", "not investment advice", "no adl",
     ),
     "ARTICLE-02-leverage.zh-CN.md": (
+        "简化", "局限", "不能", "无法", "假设", "不代表", "不是投资建议",
+    ),
+    "ARTICLE-03-dup-rate.md": (
+        "simplified", "limitation", "cannot", "does not", "assumption",
+        "caveat", "not investment advice", "no adl",
+    ),
+    "ARTICLE-03-dup-rate.zh-CN.md": (
         "简化", "局限", "不能", "无法", "假设", "不代表", "不是投资建议",
     ),
 }
@@ -394,6 +410,92 @@ def check_leverage(failures: list[str]) -> int:
     return checked
 
 
+DUP_RATE = RESULTS / "dup_rate"
+DUP_RATE_ORDER = ("dup_0pct", "dup_1pct", "dup_5pct", "dup_nodedupe", "dup_20pct")
+
+
+def check_dup_rate(failures: list[str]) -> int:
+    """Study 3: re-derive the duplicate-rate sweep and its two identity claims."""
+    if not (DUP_RATE / "per_symbol.csv").exists():
+        failures.append("missing results/dup_rate/ (run `run.py run --configs ... --tag dup_rate`)")
+        return 0
+
+    checked = 0
+    per_symbol = pd.read_csv(DUP_RATE / "per_symbol.csv")
+    per_symbol = per_symbol[~per_symbol["benchmark"]]
+
+    docs: dict[str, str] = {}
+    for name in ("ARTICLE-03-dup-rate.md", "ARTICLE-03-dup-rate.zh-CN.md"):
+        checked += 1
+        path = ROOT / name
+        if not path.exists():
+            failures.append(f"missing {name}")
+        else:
+            docs[name] = normalise(path.read_text(encoding="utf-8"))
+
+    def expect(label: str, literal: str) -> None:
+        nonlocal checked
+        needle = normalise(literal)
+        for doc_name, text in docs.items():
+            checked += 1
+            if needle not in text:
+                failures.append(f"{doc_name}: {label} should read {literal!r}")
+
+    def expect_peak(label: str, value: float) -> None:
+        nonlocal checked
+        for doc_name, text in docs.items():
+            checked += 1
+            peaks = [float(item) for item in re.findall(r"(\d+(?:\.\d+)?)x", text)]
+            if not any(abs(peak - value) <= 0.05 for peak in peaks):
+                failures.append(f"{doc_name}: {label} should read {value:.2f}x")
+
+    for config in DUP_RATE_ORDER:
+        rows = per_symbol[per_symbol["config"] == config]
+        ruined = int(rows["ruined"].sum())
+        expect(f"ruin count for {config}", f"{ruined}/50")
+        expect(f"ruin rate for {config}", f"{ruined / 50 * 100:.0f}%")
+        expect(f"duplicates executed under {config}", f"{int(rows['dups_executed'].sum()):,}")
+        expect(f"median final equity under {config}", f"${rows['final_equity'].median():.0f}")
+        expect_peak(f"mean peak exposure under {config}", rows["max_gross_leverage"].mean())
+        expect_peak(f"worst peak exposure under {config}", rows["max_gross_leverage"].max())
+
+    dedupe = per_symbol[per_symbol["config"] == "dup_dedupe"]
+    checked += 1
+    if int(dedupe["dups_executed"].sum()) != 0:
+        failures.append("dup_dedupe executed duplicates — the dedupe arm must block all of them")
+
+    # dup_0pct (1x, no duplicate traffic) and cap_1x (5x with a 1x cap) are
+    # different code paths; identical tables are the strongest identity claim here
+    study1 = pd.read_csv(RESULTS / "per_symbol.csv")
+    study1 = study1[~study1["benchmark"]]
+    columns = ["total_return", "final_equity", "max_drawdown", "ruined", "orders", "cvar_5pct"]
+    for left, right in (("dup_0pct", "cap_1x"), ("dup_dedupe", "dup_0pct")):
+        a = per_symbol[per_symbol["config"] == left].sort_values(["symbol", "strategy"])
+        b = (
+            study1[study1["config"] == right].sort_values(["symbol", "strategy"])
+            if right == "cap_1x"
+            else per_symbol[per_symbol["config"] == right].sort_values(["symbol", "strategy"])
+        )
+        checked += 1
+        if len(a) != len(b):
+            failures.append(f"{left} and {right} have different row counts")
+            continue
+        for column in columns:
+            checked += 1
+            if not np_allclose(a[column].to_numpy(), b[column].to_numpy()):
+                failures.append(f"{left} and {right} differ on {column} — the identity claim is broken")
+
+    checked += 1
+    if not (FIGURES / "fig5_dup_rate.png").exists():
+        failures.append("missing results/figures/fig5_dup_rate.png")
+    return checked
+
+
+def np_allclose(a, b) -> bool:
+    return bool(np.allclose(np.asarray(a, dtype="float64"), np.asarray(b, dtype="float64"),
+                            rtol=0, atol=1e-12))
+
+
 def main() -> int:
     failures: list[str] = []
     checked = (
@@ -405,6 +507,7 @@ def main() -> int:
         + check_prose_hygiene(failures)
         + check_artifacts(failures)
         + check_leverage(failures)
+        + check_dup_rate(failures)
     )
     for line in failures:
         print(f"FAIL  {line}")

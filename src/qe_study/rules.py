@@ -62,6 +62,18 @@ LEVERAGE_CONFIGS: tuple[GuardConfig, ...] = (
     GuardConfig(name="cap_3x", group="leverage", exposure_cap=3.0),
 )
 
+# Study 3 (v0.3) — does the duplicate *rate* matter, or only the fact of duplication?
+# All arms sit at 1x with dedupe off, so the only moving part is how often an
+# order is re-sent. dup_nodedupe (10%) and dup_dedupe come along as cross-checks
+# against study 1, and dup_0pct should land on cap_1x: same 1x exposure, no
+# duplicate traffic.
+DUP_RATE_CONFIGS: tuple[GuardConfig, ...] = (
+    GuardConfig(name="dup_0pct", group="dup_rate", leverage=1.0, duplicate_prob=0.0),
+    GuardConfig(name="dup_1pct", group="dup_rate", leverage=1.0, duplicate_prob=0.01),
+    GuardConfig(name="dup_5pct", group="dup_rate", leverage=1.0, duplicate_prob=0.05),
+    GuardConfig(name="dup_20pct", group="dup_rate", leverage=1.0, duplicate_prob=0.20),
+)
+
 CONFIGS: tuple[GuardConfig, ...] = MAIN_CONFIGS + DUP_CONFIGS
-CONFIG_BY_NAME = {cfg.name: cfg for cfg in CONFIGS + LEVERAGE_CONFIGS}
+CONFIG_BY_NAME = {cfg.name: cfg for cfg in CONFIGS + LEVERAGE_CONFIGS + DUP_RATE_CONFIGS}
 
