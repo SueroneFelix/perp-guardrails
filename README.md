@@ -156,6 +156,26 @@ results/
 
 ---
 
+## Tool: `keycheck` — audit the key before the bot
+
+The studies above measure policy. `keycheck` measures *permission*: it asks the exchange what a given API key may do, then prints what a leak would cost.
+
+```bash
+python run.py keycheck --exchange binance      # reads BINANCE_API_KEY / BINANCE_API_SECRET
+python run.py keycheck --exchange okx          # reads OKX_API_KEY / OKX_API_SECRET / OKX_API_PASSPHRASE
+python run.py keycheck --from-json snap.json   # offline: evaluate a hand-written snapshot
+```
+
+- **Read-only by construction.** One request to the permissions endpoint (`/sapi/v1/account/apiRestrictions`, `/api/v5/account/config`). No order calls, no withdrawals, no writes. A read-only key is enough.
+- **Nothing is stored.** The key is used once and never printed, logged or written to disk.
+- **Exit code is the verdict** — `0` clean, `1` unsafe — so it can gate a deployment step.
+
+Tiers: `WITHDRAWALS` and `UNIVERSAL_TRANSFER` are critical, `INTERNAL_TRANSFER` / `NO_IP_ALLOWLIST` / `NO_EXPIRY` high, `NO_TRADE` / `NO_FUTURES` blocking (the key cannot run the strategy), `OVERPERMITTED_SPOT` medium. Where an exchange does not expose a fact — OKX returns neither the IP allowlist nor an expiry date — the report says `IP_UNKNOWN` / `EXPIRY_UNKNOWN` instead of guessing.
+
+Why it lives here: the studies say an account dies from position rules. `WITHDRAWALS` is the one permission that can kill it without a single trade.
+
+---
+
 ## What this does not model
 
 - **Liquidation is simplified** to "the intrabar adverse extreme took equity to zero". No partial liquidation, insurance fund, ADL or exchange-specific maintenance margin. Real liquidations are usually worse, not better.
@@ -180,8 +200,10 @@ src/qe_study/
 ├── rules.py            # experiment matrix (two isolated experiments)
 ├── engine.py           # bar-by-bar fill engine
 ├── metrics.py          # return / tail / risk metrics
-└── cli.py              # download | validate | run
+├── keycheck.py         # read-only API-key permission audit (no orders, no secrets)
+└── cli.py              # download | validate | run | keycheck
 tests/test_engine.py    # exposure cap, dedupe, kill switch, no look-ahead
+tests/test_keycheck.py  # permission verdicts, unknown-vs-absent handling, CLI exit code
 ```
 
 ---

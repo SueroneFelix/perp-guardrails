@@ -1,4 +1,4 @@
-"""Command line entry point: download | validate | run."""
+"""Command line entry point: download | validate | run | keycheck."""
 
 from __future__ import annotations
 
@@ -185,6 +185,24 @@ def _print_table(frame: pd.DataFrame, title: str, group: str | None = None) -> N
     print(show[keep].to_string(index=False))
 
 
+def cmd_keycheck(args: argparse.Namespace) -> None:
+    from . import keycheck
+
+    if args.from_json:
+        # utf-8-sig: Windows shells and editors love to prepend a BOM
+        payload = json.loads(Path(args.from_json).read_text(encoding="utf-8-sig"))
+        snapshot = keycheck.from_manual(payload)
+    elif args.exchange:
+        snapshot = keycheck.snapshot_from_env(args.exchange)
+    else:
+        raise SystemExit("pass --exchange binance|okx, or --from-json <snapshot.json>")
+
+    report = keycheck.evaluate(snapshot, profile=args.profile)
+    print(keycheck.render_json(report) if args.json else keycheck.render_text(report))
+    if report.exit_code:
+        raise SystemExit(report.exit_code)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="qe-study", description="Guardrail ablation study")
     parser.add_argument("--version", action="version", version=C.STUDY_VERSION)
@@ -210,6 +228,13 @@ def main(argv: list[str] | None = None) -> None:
         help="write into results/<tag>/ instead of results/ (required with --configs)",
     )
     p_run.set_defaults(func=cmd_run)
+
+    p_key = sub.add_parser("keycheck", help="audit an API key's permissions without placing orders")
+    p_key.add_argument("--exchange", choices=["binance", "okx"])
+    p_key.add_argument("--from-json", help="evaluate a saved snapshot instead of calling the exchange")
+    p_key.add_argument("--profile", choices=["perp", "spot"], default="perp")
+    p_key.add_argument("--json", action="store_true", help="machine-readable output")
+    p_key.set_defaults(func=cmd_keycheck)
 
     args = parser.parse_args(argv)
     args.func(args)
